@@ -1,0 +1,68 @@
+name: Deploy staging
+
+on:
+  push:
+    branches:
+      - staging
+  pull_request:
+    branches_ignore:
+      - production
+      - staging
+
+jobs:
+  compile_code:
+    runs-on: ubuntu-latest
+    container:
+      image: openjdk:13
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache gradle build-cache
+        uses: actions/cache@v2
+        with:
+          path: ./build-cache
+          key: build-cache
+      - run: |
+          ls -l
+          mkdir -p build-cache build/docker
+          touch build-cache/chached_file
+          touch build/compiled_file
+          echo "FROM nginx:latest" > build/docker/Dockerfile
+      - name: Upload compiled artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: gradle-artifacts
+          path: |
+            build/
+
+  build_image:
+    needs: compile_code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download compiled artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: gradle-artifacts
+      - uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v2
+        with:
+          push: true
+          tags: test-image:$GITHUB_SHA
+          context: build/docker
+
+#  helm_upgrade:
+#    runs-on: ubuntu-latest
+#    container:
+#      image: gcr.io/$PROJECT_ID/helm-sops:1.0
+#    steps:
+#      - run: secrets upgrade gorillas-eddress-api ./chart \
+#          --values=./chart/values.yaml \
+#          --values=./chart/secrets.staging.yaml \
+#          --set=api.image.tag=$COMMIT_SHA \
+#          --install \
+#          --wait \
+#          --atomic \
+#          --history-max=25
+
