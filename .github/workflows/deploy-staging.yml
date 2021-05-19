@@ -9,9 +9,12 @@ on:
       - production
       - staging
 
+env:
+  PROJECT_ID: gorillas-servers
+
 jobs:
   compile_code:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     container:
       image: openjdk:13
     steps:
@@ -27,6 +30,8 @@ jobs:
           touch build-cache/chached_file
           touch build/compiled_file
           echo "FROM nginx:latest" > build/docker/Dockerfile
+          ls -l
+          echo "Finished"
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -36,7 +41,7 @@ jobs:
 
   build_image:
     needs: compile_code
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Download compiled artifacts
         uses: actions/download-artifact@v2
@@ -44,12 +49,13 @@ jobs:
           name: gradle-artifacts
       - uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: gcr.io
+          username: _json_key
+          password: ${{ secrets.GCR_JSON_KEY }}
       - uses: docker/build-push-action@v2
         with:
           push: true
-          tags: test-image:$GITHUB_SHA
+          tags: gcr.io/${{ env.PROJECT_ID }}/kszymans-image:latest
           context: build/docker
 
 #  helm_upgrade:
