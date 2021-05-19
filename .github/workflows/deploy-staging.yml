@@ -16,7 +16,10 @@ jobs:
   compile_code:
     runs-on: self-hosted
     container:
-      image: openjdk:13
+      image: gcr.io/${{ env.PROJECT_ID }}/openjdk13
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCR_JSON_KEY }}
     steps:
       - uses: actions/checkout@v2
       - name: Cache gradle build-cache
@@ -24,14 +27,7 @@ jobs:
         with:
           path: ./build-cache
           key: build-cache
-      - run: |
-          ls -l
-          mkdir -p build-cache build/docker
-          touch build-cache/chached_file
-          touch build/compiled_file
-          echo "FROM nginx:latest" > build/docker/Dockerfile
-          ls -l
-          echo "Finished"
+      - run: ./gradlew build --build-cache
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -55,7 +51,7 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           push: true
-          tags: gcr.io/${{ env.PROJECT_ID }}/kszymans-image:latest
+          tags: gcr.io/${{ env.PROJECT_ID }}/kszymans-image:${{ env.GITHUB_SHA }}
           context: build/docker
 
 #  helm_upgrade:
