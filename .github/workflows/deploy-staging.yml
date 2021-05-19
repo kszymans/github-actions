@@ -16,7 +16,10 @@ jobs:
   compile_code:
     runs-on: self-hosted
     container:
-      image: openjdk:13
+      image: gcr.io/gorillas-servers/openjdk13
+      credentials:
+        username: _json_key
+        password: ${{ secrets.GCR_JSON_KEY }}
     steps:
       - uses: actions/checkout@v2
       - name: Cache gradle build-cache
@@ -55,7 +58,7 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           push: true
-          tags: gcr.io/${{ env.PROJECT_ID }}/kszymans-image:latest
+          tags: gcr.io/${{ env.PROJECT_ID }}/kszymans-image:${{ github.sha }}
           context: build/docker
 
 #  helm_upgrade:
